@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>稟議 〜会社を育てるゲーム〜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #1B2436;
+    --ink-2: #262f45;
+    --paper: #F2EDE1;
+    --paper-dim: #e6e0d0;
+    --hanko: #B23A2E;
+    --hanko-dark: #8f2c22;
+    --gold: #C9A227;
+    --graphite: #6b7182;
+    --good: #3f7d5c;
+    --bad: #B23A2E;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--ink);
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(201,162,39,0.08), transparent 40%),
+      radial-gradient(circle at 90% 85%, rgba(178,58,46,0.10), transparent 45%);
+    min-height:100vh;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    color: var(--paper);
+    display:flex;
+    justify-content:center;
+    padding: 18px 12px 40px;
+  }
+  .app{ width:100%; max-width:460px; }
+
+  .brand{
+    text-align:center;
+    margin-bottom:14px;
+    letter-spacing: 0.12em;
+  }
+  .brand .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color: var(--gold);
+    letter-spacing: 0.25em;
+  }
+  .brand h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size: 26px;
+    margin: 4px 0 0;
+    color: var(--paper);
+  }
+
+  /* Stat ledger strip */
+  .ledger{
+    display:grid;
+    grid-template-columns: repeat(4,1fr);
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .stat{
+    background: rgba(242,237,225,0.06);
+    border: 1px solid rgba(242,237,225,0.14);
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align:center;
+  }
+  .stat .label{
+    font-size:10px;
+    color: var(--graphite);
+    letter-spacing:0.08em;
+  }
+  .stat .val{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:18px;
+    margin-top:2px;
+    color: var(--paper);
+  }
+  .stat .bar{
+    height:4px;
+    border-radius:2px;
+    background: rgba(242,237,225,0.12);
+    margin-top:6px;
+    overflow:hidden;
+  }
+  .stat .bar > div{
+    height:100%;
+    border-radius:2px;
+    transition: width 0.5s ease;
+  }
+  .turn-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color: var(--graphite);
+    margin-bottom:10px;
+    padding: 0 2px;
+  }
+  .turn-row b{ color: var(--gold); }
+
+  /* Document card = 稟議書 */
+  .doc{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 4px;
+    padding: 22px 20px 18px;
+    position:relative;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    border-top: 6px solid var(--hanko);
+  }
+  .doc::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0; bottom:0;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(27,36,54,0.035) 28px);
+    pointer-events:none;
+    border-radius:4px;
+  }
+  .doc-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom:8px;
+    margin-bottom:14px;
+  }
+  .doc-head .no{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color: var(--graphite);
+  }
+  .doc-head .kind{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:14px;
+    letter-spacing:0.15em;
+  }
+  .doc h2{
+    font-family:'Shippori Mincho', serif;
+    font-size: 19px;
+    line-height:1.5;
+    margin: 0 0 10px;
+    font-weight:700;
+  }
+  .doc p.body{
+    font-size:14px;
+    line-height:1.85;
+    color:#3a3f4d;
+    margin: 0 0 18px;
+  }
+
+  .choices{ display:flex; flex-direction:column; gap:10px; }
+  .choice{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background: #fff;
+    border: 1.5px solid rgba(27,36,54,0.18);
+    border-radius: 8px;
+    padding: 12px 12px;
+    text-align:left;
+    cursor:pointer;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .choice:active{ transform: scale(0.98); }
+  .choice .stamp-slot{
+    flex: 0 0 40px;
+    width:40px; height:40px;
+    border-radius:50%;
+    border: 2px solid var(--hanko);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:15px;
+    color: var(--hanko);
+    flex-shrink:0;
+  }
+  .choice .txt{ flex:1; }
+  .choice .txt .label{ font-size:14.5px; font-weight:700; color:var(--ink); line-height:1.4;}
+  .choice .txt .hint{ font-size:11px; color:var(--graphite); margin-top:4px; letter-spacing:0.02em; }
+  .choice .hint .up{ color: var(--good); font-weight:700; }
+  .choice .hint .down{ color: var(--bad); font-weight:700; }
+
+  .choice.stamped{
+    border-color: var(--hanko);
+    background: #fff7f5;
+  }
+  .choice.stamped .stamp-slot{
+    background: var(--hanko);
+    color: #fff;
+    animation: stampHit 0.35s ease;
+  }
+  @keyframes stampHit{
+    0%{ transform: scale(1.9) rotate(-14deg); opacity:0;}
+    55%{ transform: scale(0.92) rotate(6deg); opacity:1;}
+    100%{ transform: scale(1) rotate(0deg);}
+  }
+  .choice.dim{ opacity:0.35; pointer-events:none; }
+
+  .result-box{
+    margin-top:16px;
+    background: rgba(27,36,54,0.05);
+    border-left: 3px solid var(--hanko);
+    padding: 12px 14px;
+    border-radius: 4px;
+    font-size:13.5px;
+    line-height:1.75;
+    color:#33384a;
+  }
+  .next-btn{
+    margin-top:14px;
+    width:100%;
+    padding: 13px;
+    border:none;
+    border-radius:8px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:0.05em;
+    cursor:pointer;
+  }
+  .next-btn:active{ transform: scale(0.98); }
+
+  /* Title / ending screens */
+  .center-card{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius:4px;
+    padding: 30px 24px;
+    text-align:center;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+  }
+  .center-card .kanji-big{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:30px;
+    margin: 6px 0 2px;
+  }
+  .center-card .sub{
+    font-size:13px;
+    color:var(--graphite);
+    line-height:1.8;
+    margin-bottom:20px;
+  }
+  .start-btn{
+    display:inline-block;
+    padding: 14px 30px;
+    background: var(--hanko);
+    color:#fff;
+    border-radius: 999px;
+    font-weight:700;
+    font-size:14.5px;
+    border:none;
+    cursor:pointer;
+    letter-spacing:0.05em;
+    box-shadow: 0 8px 18px rgba(178,58,46,0.35);
+  }
+  .start-btn:active{ transform: scale(0.97); }
+
+  .rank-badge{
+    width:78px; height:78px;
+    border-radius:50%;
+    border: 3px solid var(--hanko);
+    display:flex; align-items:center; justify-content:center;
+    margin: 0 auto 14px;
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:34px;
+    color: var(--hanko);
+  }
+  .final-stats{
+    display:flex;
+    justify-content:center;
+    gap:14px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .final-stats div{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--graphite);
+  }
+  .final-stats div b{
+    display:block;
+    color:var(--ink);
+    font-size:16px;
+  }
+  .footer-note{
+    text-align:center;
+    color: rgba(242,237,225,0.35);
+    font-size:11px;
+    margin-top:18px;
+    letter-spacing:0.05em;
+  }
+
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 20px}
+  .setup-option{background:#fff;border:1.5px solid rgba(27,36,54,.18);border-radius:10px;padding:12px;text-align:left;cursor:pointer;color:var(--ink)}
+  .setup-option.selected{border-color:var(--hanko);box-shadow:0 0 0 2px rgba(178,58,46,.12)}
+  .setup-option b{display:block;font-size:14px}.setup-option small{display:block;color:var(--graphite);margin-top:3px;line-height:1.5}
+  .company-name{width:100%;padding:12px;border:1.5px solid rgba(27,36,54,.18);border-radius:8px;font-size:15px;margin-top:8px}
+  .milestone{margin:10px 0 0;padding:10px 12px;background:#f8f4e9;border-radius:7px;font-size:12px;color:#4b4f5c}
+  .company-tag{font-size:11px;color:var(--gold);letter-spacing:.08em;margin-top:2px}
+
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const STAT_META = {
+  funds:      { label:"資金",   color:"#C9A227" },
+  morale:     { label:"士気",   color:"#3f7d5c" },
+  reputation: { label:"評判",   color:"#5b7db2" },
+  growth:     { label:"成長",   color:"#B23A2E" },
+};
+const MAX_TURNS = 12;
+
+const EVENTS = [
+  {
+    no:"001", kind:"人事に関する件",
+    title:"エース社員から「給料を上げないと辞める」と言われた",
+    body:"営業成績トップの社員が、他社からの引き抜きを盾に交渉してきた。人件費予算はすでにギリギリだ。",
+    choices:[
+      {label:"要求通り昇給する", hint:{funds:"down",morale:"up"}, eff:{funds:-14,morale:10,reputation:0,growth:2},
+       result:"昇給に応じ、彼は残った。他の社員からも「頑張れば報われる」と士気が上がったが、財務は圧迫された。"},
+      {label:"昇進というポストで応える", hint:{funds:"flat",morale:"flat",growth:"up"}, eff:{funds:-3,morale:2,reputation:2,growth:4},
+       result:"肩書きに免じて残留を決めた彼だったが、心の中では「次はないぞ」と思っている。"},
+      {label:"引き止めない", hint:{funds:"up",morale:"down"}, eff:{funds:6,morale:-12,reputation:-4,growth:-2},
+       result:"彼は退職した。数字が一気に落ち込み、残されたチームの空気も重い。"},
+    ]
+  },
+  {
+    no:"002", kind:"広報に関する件",
+    title:"取材の申し込みが来た。ただし条件がある",
+    body:"業界メディアから取材依頼。ただし「不採算事業の撤退」についても踏み込んで聞きたいという。",
+    choices:[
+      {label:"正直に全部話す", hint:{reputation:"up",morale:"down"}, eff:{funds:0,morale:-4,reputation:14,growth:3},
+       result:"誠実な姿勢が評価され、業界内での信頼が上がった。社内には「あそこまで言う必要あった?」という声も。"},
+      {label:"広報用の当たり障りない回答にする", hint:{reputation:"flat"}, eff:{funds:0,morale:0,reputation:2,growth:1},
+       result:"無難な記事になった。特に話題にはならなかったが、リスクも取っていない。"},
+      {label:"取材を断る", hint:{reputation:"down"}, eff:{funds:2,morale:0,reputation:-8,growth:-1},
+       result:"「何か隠しているのでは」という憶測がSNSで少し広がった。"},
+    ]
+  },
+  {
+    no:"003", kind:"投資に関する件",
+    title:"新しい業務ツールの導入を打診された",
+    body:"月額費用はかかるが、社員の作業時間を大幅に短縮できるというツール。導入コストは決して安くない。",
+    choices:[
+      {label:"すぐに導入する", hint:{funds:"down",morale:"up",growth:"up"}, eff:{funds:-10,morale:8,reputation:1,growth:6},
+       result:"最初は戸惑う社員もいたが、慣れると評判は上々。残業時間が目に見えて減った。"},
+      {label:"まずは一部署だけ試す", hint:{funds:"flat",growth:"flat"}, eff:{funds:-4,morale:3,reputation:0,growth:3},
+       result:"小さく試したことでリスクを抑えつつ、手応えを確認できた。"},
+      {label:"様子見で見送る", hint:{funds:"up",morale:"down"}, eff:{funds:5,morale:-5,reputation:0,growth:-2},
+       result:"「またコスト削減か」という空気が社内に漂った。"},
+    ]
+  },
+  {
+    no:"004", kind:"クレームに関する件",
+    title:"納品物にミスがあり、取引先から強いクレームが入った",
+    body:"担当者のケアレスミスだった。取引先は「今後の取引を見直す」とまで言っている。",
+    choices:[
+      {label:"役員が直接謝罪に出向く", hint:{reputation:"up",morale:"flat"}, eff:{funds:-2,morale:1,reputation:10,growth:1},
+       result:"誠意が伝わり、取引は継続。担当者もその姿を見て身が引き締まった様子だった。"},
+      {label:"担当者に厳重注意して終える", hint:{morale:"down"}, eff:{funds:0,morale:-8,reputation:-2,growth:0},
+       result:"社内はピリついた空気に。取引先への説明も形式的なもので終わった。"},
+      {label:"再発防止のチェック体制を作る", hint:{funds:"down",growth:"up"}, eff:{funds:-6,morale:2,reputation:4,growth:5},
+       result:"手間は増えたが、以降のミスは目に見えて減った。地味だが効いている投資だった。"},
+    ]
+  },
+  {
+    no:"005", kind:"労務に関する件",
+    title:"「残業が多すぎる」と若手社員から声が上がった",
+    body:"繁忙期が続き、複数の若手からアンケートで不満の声。放置すればさらに離職が増えそうだ。",
+    choices:[
+      {label:"人員を増やす", hint:{funds:"down",morale:"up"}, eff:{funds:-12,morale:12,reputation:2,growth:1},
+       result:"負担は分散され、雰囲気は落ち着いた。ただし採用・教育コストがのしかかる。"},
+      {label:"業務を棚卸しして減らす", hint:{growth:"up"}, eff:{funds:-2,morale:8,reputation:1,growth:4},
+       result:"無駄な会議や報告が削られ、効率が上がった。社員からも好意的な反応。"},
+      {label:"「今だけ頑張ろう」で乗り切る", hint:{morale:"down"}, eff:{funds:2,morale:-10,reputation:-3,growth:0},
+       result:"表向きは乗り切ったが、翌月から退職の相談がぽつぽつ増え始めた。"},
+    ]
+  },
+  {
+    no:"006", kind:"営業に関する件",
+    title:"大口案件を受注できそうだが、無理な値引きを求められている",
+    body:"通れば売上は大きいが、利益率はほぼゼロ。他の案件にも悪影響が出るかもしれない。",
+    choices:[
+      {label:"値引きを飲んで受注する", hint:{funds:"flat",growth:"up"}, eff:{funds:2,morale:-3,reputation:3,growth:6},
+       result:"実績と知名度は手に入れたが、現場は「安く買い叩かれた」感を引きずっている。"},
+      {label:"条件交渉を粘り強く行う", hint:{growth:"flat"}, eff:{funds:4,morale:1,reputation:1,growth:2},
+       result:"多少の妥協点は見つかり、無理のない形で受注できた。"},
+      {label:"見送る", hint:{funds:"flat",morale:"up"}, eff:{funds:0,morale:3,reputation:-1,growth:-1},
+       result:"目先の売上は逃したが、現場は「まともな判断をしてくれた」と安堵していた。"},
+    ]
+  },
+  {
+    no:"007", kind:"組織に関する件",
+    title:"社内で派閥のような対立が生まれている",
+    body:"営業部と開発部の間で「あっちは何もわかってない」という空気が広がっている。",
+    choices:[
+      {label:"合同ミーティングの場を作る", hint:{morale:"up",growth:"up"}, eff:{funds:-3,morale:9,reputation:0,growth:4},
+       result:"最初はぎこちなかったが、対話を重ねるうちに相互理解が進んだ。"},
+      {label:"部門長同士で話をつけさせる", hint:{morale:"flat"}, eff:{funds:0,morale:2,reputation:0,growth:1},
+       result:"表面上は収まったが、現場レベルの溝はまだ残っている。"},
+      {label:"見て見ぬふりをする", hint:{morale:"down"}, eff:{funds:0,morale:-9,reputation:-1,growth:-2},
+       result:"対立は静かに悪化し、いくつかの重要な連携が滞るようになった。"},
+    ]
+  },
+  {
+    no:"008", kind:"資金繰りに関する件",
+    title:"来月の資金繰りが厳しい",
+    body:"入金サイトのずれが重なり、一時的にキャッシュが心もとない。銀行融資という手もある。",
+    choices:[
+      {label:"銀行から融資を受ける", hint:{funds:"up",growth:"flat"}, eff:{funds:18,morale:0,reputation:-1,growth:1},
+       result:"当面の資金は確保できた。ただし今後の返済計画には注意が必要だ。"},
+      {label:"経費を一時的に絞る", hint:{funds:"up",morale:"down"}, eff:{funds:8,morale:-6,reputation:0,growth:-1},
+       result:"何とか乗り切ったが、社内の消耗品や福利厚生の削減に不満の声も。"},
+      {label:"取引先に支払い調整を相談する", hint:{funds:"flat",reputation:"down"}, eff:{funds:6,morale:0,reputation:-5,growth:0},
+       result:"何とか乗り切ったものの、取引先からの信用は少し目減りした。"},
+    ]
+  },
+  {
+    no:"009", kind:"新規事業に関する件",
+    title:"社員から新規事業のアイデアが提案された",
+    body:"若手チームが自主的に立ち上げた企画。面白いが、リソースは本業から割くことになる。",
+    choices:[
+      {label:"予算をつけて挑戦させる", hint:{funds:"down",growth:"up"}, eff:{funds:-10,morale:10,reputation:3,growth:8},
+       result:"社内の熱量が上がり、挑戦する空気が生まれた。結果が出るのはこれからだ。"},
+      {label:"小さく試験導入する", hint:{growth:"flat"}, eff:{funds:-3,morale:5,reputation:1,growth:4},
+       result:"リスクを抑えつつ、若手のモチベーションにもつながった。"},
+      {label:"今は本業に集中させる", hint:{morale:"down"}, eff:{funds:2,morale:-6,reputation:0,growth:-1},
+       result:"堅実ではあるが、提案した若手たちの熱は少し冷めてしまったようだ。"},
+    ]
+  },
+  {
+    no:"010", kind:"競合に関する件",
+    title:"競合他社が似たサービスを低価格で出してきた",
+    body:"価格で対抗するか、別の価値で勝負するか。judgement が問われている。",
+    choices:[
+      {label:"品質・サポートで差別化する", hint:{reputation:"up",growth:"up"}, eff:{funds:-4,morale:4,reputation:8,growth:5},
+       result:"価格競争に巻き込まれず、既存顧客からの評価がさらに上がった。"},
+      {label:"一部だけ値下げで対抗する", hint:{funds:"down"}, eff:{funds:-9,morale:-2,reputation:2,growth:2},
+       result:"シェアの流出は防げたが、利益率は悪化した。"},
+      {label:"静観する", hint:{funds:"flat",reputation:"down"}, eff:{funds:0,morale:0,reputation:-4,growth:-2},
+       result:"じわじわとシェアを奪われ始め、社内にも焦りが見え始めた。"},
+    ]
+  },
+  {
+    no:"011", kind:"人事に関する件",
+    title:"中途採用の候補者、経歴は素晴らしいが人柄に少し不安がある",
+    body:"面接での評価が割れている。即戦力は喉から手が出るほど欲しい時期だ。",
+    choices:[
+      {label:"実力を評価して採用する", hint:{growth:"up",morale:"flat"}, eff:{funds:-5,morale:-2,reputation:0,growth:7},
+       result:"成果はすぐに出た。ただしチーム内での摩擦の噂もちらほら聞こえてくる。"},
+      {label:"もう一度面接の機会を設ける", hint:{growth:"flat"}, eff:{funds:-1,morale:1,reputation:0,growth:2},
+       result:"慎重な見極めの末、納得感のある採用判断ができた。"},
+      {label:"見送る", hint:{funds:"flat"}, eff:{funds:0,morale:0,reputation:0,growth:-1},
+       result:"安全策を取った。即戦力不足はもうしばらく続きそうだ。"},
+    ]
+  },
+  {
+    no:"012", kind:"社内制度に関する件",
+    title:"リモートワークを恒久化するか、出社に戻すかの議論が続いている",
+    body:"生産性のデータは部署によってまちまち。社員の間でも意見が割れている。",
+    choices:[
+      {label:"個人・チームの裁量に任せる", hint:{morale:"up"}, eff:{funds:-1,morale:9,reputation:2,growth:2},
+       result:"自由度の高さが評価され、満足度が上がった。マネジメントの手間は増えたが。"},
+      {label:"週2出社のハイブリッドに統一", hint:{morale:"flat"}, eff:{funds:0,morale:3,reputation:1,growth:1},
+       result:"賛否はあったが、概ね無難に収まった。"},
+      {label:"全面出社に戻す", hint:{morale:"down"}, eff:{funds:2,morale:-10,reputation:-2,growth:0},
+       result:"通勤コストへの不満が噴出し、退職を考え始めた社員も出てきた。"},
+    ]
+  },
+  {
+    no:"013", kind:"炎上に関する件",
+    title:"社員の何気ない投稿がSNSで少し炎上した",
+    body:"悪意はなかったが、言葉足らずな表現が誤解を招いた。対応を急ぐ必要がある。",
+    choices:[
+      {label:"迅速に説明と謝罪を出す", hint:{reputation:"up"}, eff:{funds:0,morale:-1,reputation:9,growth:1},
+       result:"素早い対応が好意的に受け止められ、火は大きくならずに済んだ。"},
+      {label:"静観して自然に沈静化を待つ", hint:{reputation:"down"}, eff:{funds:0,morale:0,reputation:-6,growth:0},
+       result:"炎上は徐々に収まったものの、「対応が遅い会社」という印象が残った。"},
+      {label:"投稿者を厳しく処分する", hint:{morale:"down",reputation:"flat"}, eff:{funds:0,morale:-9,reputation:1,growth:0},
+       result:"社外へのメッセージにはなったが、社内は萎縮した空気に包まれた。"},
+    ]
+  },
+  {
+    no:"014", kind:"福利厚生に関する件",
+    title:"社員食堂や休憩スペースへの投資を検討している",
+    body:"直接の売上にはつながらないが、じわじわと働きやすさに効いてくる類の投資だ。",
+    choices:[
+      {label:"思い切って投資する", hint:{funds:"down",morale:"up"}, eff:{funds:-9,morale:10,reputation:2,growth:2},
+       result:"社員から驚くほど好評だった。小さな配慮が、日々の空気を変えた。"},
+      {label:"最低限の改善に留める", hint:{funds:"flat"}, eff:{funds:-3,morale:4,reputation:0,growth:1},
+       result:"大きな変化はないが、「見てくれている」という安心感にはつながった。"},
+      {label:"見送る", hint:{funds:"up"}, eff:{funds:3,morale:-3,reputation:0,growth:0},
+       result:"堅実な判断ではあるが、他社と比較されて少しの不満が漏れた。"},
+    ]
+  },
+  {
+    no:"015", kind:"評価制度に関する件",
+    title:"成果主義を強めるか、チーム貢献を重視するかで評価制度を見直す時期が来た",
+    body:"どちらの制度にも一長一短がある。会社の方向性そのものを示すことになりそうだ。",
+    choices:[
+      {label:"成果主義を強める", hint:{growth:"up",morale:"flat"}, eff:{funds:-2,morale:-3,reputation:1,growth:6},
+       result:"数字を追う空気が強まり、成長スピードは上がったが、少しギスギスした声も聞こえる。"},
+      {label:"チーム貢献も評価に含める", hint:{morale:"up"}, eff:{funds:-3,morale:8,reputation:2,growth:2},
+       result:"「見てもらえている」という安心感が広がり、チームの空気が良くなった。"},
+      {label:"今の制度を維持する", hint:{growth:"flat"}, eff:{funds:0,morale:0,reputation:0,growth:0},
+       result:"変化はなかった。良くも悪くも、現状維持という判断だった。"},
+    ]
+  },
+  {
+    no:"016", kind:"海外展開に関する件",
+    title:"海外の展示会から、大きなブースでの出展に誘われた",
+    body:"出展料はかなり高額。うまくハマれば海外の大口顧客がつくが、空振りに終わる可能性も十分ある。",
+    choices:[
+      {label:"小さめのブースで手堅く出る", hint:{funds:"down",reputation:"up"}, eff:{funds:-6,morale:1,reputation:5,growth:2},
+       result:"派手さはなかったが、着実に名刺交換ができた。堅実な一歩だった。"},
+      {label:"思い切って大きなブースに賭ける", hint:{funds:"risky",growth:"risky"}, risky:true, chance:0.5,
+       good:{eff:{funds:-10,morale:5,reputation:14,growth:12}, result:"大手バイヤーの目に留まり、商談が一気に動き出した。賭けは大当たりだった。"},
+       bad:{eff:{funds:-22,morale:-4,reputation:-3,growth:-2}, result:"ブースは閑散としたまま日程が終わった。高額な出展料だけが重くのしかかる。"}},
+      {label:"見送る", hint:{funds:"flat"}, eff:{funds:0,morale:0,reputation:-1,growth:0},
+       result:"手堅い判断ではあるが、チャンスを逃したかもしれないという空気も少し残った。"},
+    ]
+  },
+  {
+    no:"017", kind:"広報に関する件",
+    title:"自社の投稿がSNSでバズりかけている",
+    body:"このタイミングで広告費を追加投入すれば拡散が伸びるかもしれない。ただし逆に「必死さ」が透けて冷める可能性もある。",
+    choices:[
+      {label:"自然な広がりに任せる", hint:{reputation:"up"}, eff:{funds:0,morale:1,reputation:4,growth:2},
+       result:"ゆるやかにだが着実に話題が広がり、変な反発も生まれなかった。"},
+      {label:"広告費を追加してブーストする", hint:{funds:"risky",reputation:"risky"}, risky:true, chance:0.45,
+       good:{eff:{funds:-8,morale:3,reputation:16,growth:9}, result:"波に乗り、想定以上の拡散に。問い合わせが急増し、社内も活気づいた。"},
+       bad:{eff:{funds:-14,morale:-2,reputation:-9,growth:-1}, result:"「広告臭い」と一部で冷めた反応が広がり、逆に勢いを削いでしまった。"}},
+      {label:"静観する", hint:{funds:"flat"}, eff:{funds:1,morale:0,reputation:0,growth:0},
+       result:"特に何も起きなかった。話題は数日で自然に沈静化した。"},
+    ]
+  },
+  {
+    no:"018", kind:"営業に関する件",
+    title:"新人が独断でまとめてきた大型商談。契約条件の細部が少し不安だ",
+    body:"金額は魅力的だが、契約書の一部条項があいまいなまま先方が急いでいる。詰め切るか、勢いで進めるか。",
+    choices:[
+      {label:"契約書を弁護士に精査させてから進める", hint:{funds:"down",growth:"up"}, eff:{funds:-4,morale:1,reputation:1,growth:5},
+       result:"数日遅れたが、不利な条項を事前に修正できた。地味だが手堅い一手だった。"},
+      {label:"新人を信じてそのまま契約する", hint:{growth:"risky",funds:"risky"}, risky:true, chance:0.5,
+       good:{eff:{funds:16,morale:8,reputation:5,growth:10}, result:"杞憂だった。条件は問題なく、新人の評価も一気に上がった。"},
+       bad:{eff:{funds:-16,morale:-5,reputation:-4,growth:-3}, result:"案の定、あいまいだった条項が後で不利に働き、対応に追われることになった。"}},
+      {label:"新人にもう一度先方と交渉させる", hint:{morale:"flat",growth:"flat"}, eff:{funds:1,morale:3,reputation:0,growth:2},
+       result:"新人にとっては良い経験になり、契約内容も無難な形に落ち着いた。"},
+    ]
+  },
+  {
+    no:"019", kind:"投資に関する件",
+    title:"「必ず伸びる」と豪語する謎のコンサルタントが売り込みに来た",
+    body:"実績資料は立派だが、どこか胡散臭さも漂う。話を聞く限り、当たれば大きいが外れも大きそうだ。",
+    choices:[
+      {label:"きっぱり断る", hint:{funds:"flat"}, eff:{funds:1,morale:0,reputation:0,growth:0},
+       result:"何も起きなかった。ただ、少しだけ「乗るべきだったか」という思いが頭をよぎった。"},
+      {label:"高額なコンサル契約を結んでみる", hint:{funds:"risky",growth:"risky"}, risky:true, chance:0.4,
+       good:{eff:{funds:-10,morale:4,reputation:2,growth:18}, result:"提案は的確そのもので、業務の伸び方が明らかに変わった。うさんくさい見た目に反して本物だった。"},
+       bad:{eff:{funds:-20,morale:-6,reputation:-6,growth:-3}, result:"具体性のない提案ばかりで、成果らしい成果もないまま契約期間が終わった。"}},
+      {label:"知人の紹介経由で少額から試す", hint:{funds:"down",growth:"flat"}, eff:{funds:-4,morale:0,reputation:0,growth:2},
+       result:"大きな成果はなかったが、リスクを抑えた分、痛手にはならなかった。"},
+    ]
+  },
+];
+
+function clamp(n){ return Math.max(0, Math.min(100, n)); }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+let state = null;
+
+function newGame(){
+  state = {
+    stats: { funds:50, morale:50, reputation:50, growth:0 },
+    companyName: "あなたの会社",
+    industry: "IT",
+    difficulty: "normal",
+    streak: 0,
+    history: [],
+    turn: 1,
+    deck: shuffle(EVENTS),
+    deckIdx: 0,
+    phase: "title", // title | event | result | ending
+    currentEvent: null,
+    chosenIdx: null,
+    resultText: "",
+    ended: null,
+  };
+  render();
+}
+
+function startCompany(){
+  const input = document.getElementById("companyInput");
+  state.companyName = (input && input.value.trim()) || "あなたの会社";
+  const bonus = {
+    IT:{growth:3, funds:-2},
+    飲食:{morale:3, funds:2},
+    アパレル:{reputation:3, funds:0},
+    ゲーム:{growth:6, funds:-5}
+  }[state.industry];
+  state.stats.funds = clamp(state.stats.funds + bonus.funds);
+  state.stats.morale = clamp(state.stats.morale + (state.industry==="飲食"?3:0));
+  state.stats.reputation = clamp(state.stats.reputation + (state.industry==="アパレル"?3:0));
+  state.stats.growth += bonus.growth;
+  if(state.difficulty==="easy") state.stats.funds = clamp(state.stats.funds+8);
+  if(state.difficulty==="hard") state.stats.funds = clamp(state.stats.funds-6);
+  state.phase = "event";
+  drawEvent();
+}
+
+function drawEvent(){
+  if(state.deckIdx >= state.deck.length){
+    state.deck = shuffle(EVENTS);
+    state.deckIdx = 0;
+  }
+  state.currentEvent = state.deck[state.deckIdx++];
+  state.chosenIdx = null;
+  state.phase = "event";
+  render();
+}
+
+function checkGameOver(){
+  const s = state.stats;
+  if(s.funds <= 0) return {type:"bankrupt"};
+  if(s.morale <= 0) return {type:"exodus"};
+  if(s.reputation <= 0) return {type:"scandal"};
+  if(state.turn > MAX_TURNS) return {type:"finish"};
+  return null;
+}
+
+function chooseOption(i){
+  if(state.chosenIdx !== null) return;
+  const ev = state.currentEvent;
+  const choice = ev.choices[i];
+  state.chosenIdx = i;
+  state.resultText = choice.result;
+  for(const k in choice.eff){
+    let delta = choice.eff[k];
+    if(state.difficulty==="hard" && delta < 0) delta = Math.round(delta * 1.25);
+    if(state.difficulty==="easy" && delta < 0) delta = Math.round(delta * 0.75);
+    state.stats[k] = k === "growth"
+      ? Math.max(0, state.stats[k] + delta)
+      : clamp(state.stats[k] + delta);
+  }
+  state.history.push({turn:state.turn,event:ev.no,choice:choice.label});
+  render();
+}
+
+function nextTurn(){
+  state.turn += 1;
+  const over = checkGameOver();
+  if(over){
+    state.ended = over;
+    state.phase = "ending";
+    render();
+    return;
+  }
+  drawEvent();
+}
+
+function hintArrow(h){
+  if(h === "up") return '<span class="up">↑</span>';
+  if(h === "down") return '<span class="down">↓</span>';
+  return '<span style="color:#9aa0ad">→</span>';
+}
+
+function renderStatBar(){
+  let html = '<div class="ledger">';
+  for(const key of ["funds","morale","reputation","growth"]){
+    const meta = STAT_META[key];
+    const v = state.stats[key];
+    const pct = key === "growth" ? Math.min(100, v) : v;
+    html += `
+      <div class="stat">
+        <div class="label">${meta.label}</div>
+        <div class="val">${v}</div>
+        <div class="bar"><div style="width:${pct}%; background:${meta.color}"></div></div>
+      </div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function endingContent(){
+  const s = state.stats;
+  const type = state.ended.type;
+  if(type === "bankrupt"){
+    return {
+      badge:"倒", title:"資金ショート、万事休す",
+      sub:"資金繰りが尽き、会社は取引先への支払いを続けられなくなった。挑戦の跡は、決算書の数字にだけ残った。"
+    };
+  }
+  if(type === "exodus"){
+    return {
+      badge:"離", title:"社員が去り、会社だけが残った",
+      sub:"数字は保てていたのに、気づけばオフィスはがらんとしていた。人がいなければ、会社は前に進めない。"
+    };
+  }
+  if(type === "scandal"){
+    return {
+      badge:"炎", title:"信頼を失い、看板を下ろすことに",
+      sub:"一つひとつの判断は間違っていなかったはずなのに、積み重なった不信感が会社の名前を傷つけた。"
+    };
+  }
+  // finish - rank by total
+  const score = s.funds + s.morale + s.reputation + s.growth*1.2;
+  let rank, title, sub;
+  if(score >= 220){ rank="S"; title="業界が注目する会社になった"; sub="資金・人・信頼・勢い、そのすべてを大きく損なわずに育て上げた。この会社の物語はまだ続く。"; }
+  else if(score >= 170){ rank="A"; title="安定した成長軌道に乗った"; sub="いくつかの綱渡りはあったが、会社は着実に前に進んでいる。次のステージが見えてきた。"; }
+  else if(score >= 120){ rank="B"; title="なんとか一区切りを迎えた"; sub="順風満帆とは言えなかったが、致命的な判断ミスは避けられた。地に足のついた経営だった。"; }
+  else { rank="C"; title="かろうじて生き延びた"; sub="綱渡りの連続だった。会社は存続しているが、まだまだ課題は山積みだ。"; }
+  return { badge:rank, title, sub };
+}
+
+function render(){
+  const app = document.getElementById('app');
+
+  if(state.phase === "title"){
+    app.innerHTML = `
+      <div class="brand">
+        <div class="eyebrow">MANAGEMENT SIMULATION</div>
+        <h1>稟&nbsp;議</h1>
+      </div>
+      <div class="center-card">
+        <div class="kanji-big">会社を、育てる。</div>
+        <div class="sub">
+          あなたは小さな会社の経営者。<br>
+          12ターンの経営判断で、会社の未来を決めます。
+        </div>
+        <input id="companyInput" class="company-name" maxlength="18"
+          placeholder="会社名を入力（任意）" value="${state.companyName}">
+        <div style="text-align:left;font-size:12px;color:var(--graphite);margin-top:16px;">業種</div>
+        <div class="setup-grid">
+          ${[
+            ["IT","IT・SaaS","成長しやすいが投資も必要"],
+            ["飲食","飲食・店舗","資金管理が重要"],
+            ["アパレル","アパレル","評判が経営に影響"],
+            ["ゲーム","ゲーム","成長とリスクが大きい"]
+          ].map(x=>`<button class="setup-option ${state.industry===x[0]?'selected':''}" onclick="state.industry='${x[0]}';render()"><b>${x[1]}</b><small>${x[2]}</small></button>`).join("")}
+        </div>
+        <div style="text-align:left;font-size:12px;color:var(--graphite);">難易度</div>
+        <div class="setup-grid">
+          ${[
+            ["easy","新人社長","資金・士気に少し余裕"],
+            ["normal","社長","標準ルール"],
+            ["hard","修羅場","判断ミスのダメージ大"]
+          ].map(x=>`<button class="setup-option ${state.difficulty===x[0]?'selected':''}" onclick="state.difficulty='${x[0]}';render()"><b>${x[1]}</b><small>${x[2]}</small></button>`).join("")}
+        </div>
+        <button class="start-btn" onclick="startCompany()">経営をはじめる</button>
+      </div>
+      <div class="footer-note">12 TURN ・ 判子を押すたびに会社は変わる</div>
+    `;
+    return;
+  }
+
+  if(state.phase === "event" || (state.phase === "event" && state.chosenIdx !== null)){
+    const ev = state.currentEvent;
+    let choicesHtml = "";
+    ev.choices.forEach((c, i) => {
+      const stamped = state.chosenIdx === i;
+      const dim = state.chosenIdx !== null && state.chosenIdx !== i;
+      let hintHtml = Object.keys(c.hint).map(k => `${STAT_META[k].label}${hintArrow(c.hint[k])}`).join('　');
+      choicesHtml += `
+        <button class="choice ${stamped ? 'stamped':''} ${dim ? 'dim':''}" onclick="chooseOption(${i})" ${state.chosenIdx!==null ? 'disabled':''}>
+          <div class="stamp-slot">${stamped ? '済' : (i===0?'甲':i===1?'乙':'丙')}</div>
+          <div class="txt">
+            <div class="label">${c.label}</div>
+            <div class="hint">${hintHtml}</div>
+          </div>
+        </button>`;
+    });
+
+    app.innerHTML = `
+      <div class="brand">
+        <div class="eyebrow">MANAGEMENT SIMULATION</div>
+        <h1>稟&nbsp;議</h1>
+      </div>
+      <div class="turn-row">
+        <span>TURN <b>${state.turn}</b> / ${MAX_TURNS}</span>
+        <span>案件No. ${ev.no}</span>
+      </div>
+      <div class="company-tag">${state.companyName}　/　${state.industry}　/　${state.difficulty==="hard"?"修羅場":state.difficulty==="easy"?"新人社長":"社長"}</div>
+      ${renderStatBar()}
+      <div class="doc">
+        <div class="doc-head">
+          <span class="kind">${ev.kind}</span>
+          <span class="no">RINGI-SHO</span>
+        </div>
+        <h2>${ev.title}</h2>
+        <p class="body">${ev.body}</p>
+        <div class="choices">${choicesHtml}</div>
+        ${state.chosenIdx !== null ? `
+          <div class="result-box">${state.resultText}
+          ${state.stats.growth >= 20 && state.turn === 4 ? '<div class="milestone">📈 成長20突破：会社に勢いが出てきた！</div>' : ''}
+          ${state.stats.reputation >= 70 && state.turn === 8 ? '<div class="milestone">🏆 評判70突破：業界で注目され始めた！</div>' : ''}
+        </div>
+          <button class="next-btn" onclick="nextTurn()">${state.turn >= MAX_TURNS ? '結果を見る' : '次の案件へ'}</button>
+        ` : ''}
+      </div>
+    `;
+    return;
+  }
+
+  if(state.phase === "ending"){
+    const s = state.stats;
+    const content = endingContent();
+    app.innerHTML = `
+      <div class="brand">
+        <div class="eyebrow">FINAL REPORT</div>
+        <h1>決&nbsp;算</h1>
+      </div>
+      <div class="center-card">
+        <div class="rank-badge">${content.badge}</div>
+        <div class="kanji-big" style="font-size:20px;">${content.title}</div>
+        <div class="sub">${content.sub}</div>
+        <div class="final-stats">
+          <div>資金<b>${s.funds}</b></div>
+          <div>士気<b>${s.morale}</b></div>
+          <div>評判<b>${s.reputation}</b></div>
+          <div>成長<b>${s.growth}</b></div>
+          <div>継続<b>${state.turn-1}ターン</b></div>
+          <div>判断数<b>${state.history.length}</b></div>
+        </div>
+        <button class="start-btn" onclick="newGame()">もう一度経営する</button>
+      </div>
+    `;
+    return;
+  }
+}
+
+newGame();
+</script>
+</body>
+</html>
