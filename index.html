@@ -625,8 +625,37 @@ function startCompany(){
   state.stats.growth += bonus.growth;
   if(state.difficulty==="easy") state.stats.funds = clamp(state.stats.funds+8);
   if(state.difficulty==="hard") state.stats.funds = clamp(state.stats.funds-6);
-  state.phase = "event";
-  drawEvent();
+  const employees = [
+  {name:"田中", role:"営業エース", bonus:"評判＋8・成長＋3"},
+  {name:"佐藤", role:"財務のプロ", bonus:"資金＋10"},
+  {name:"鈴木", role:"若手エース", bonus:"成長＋8・士気＋5"}
+];
+
+const choice = prompt(
+  "【社員採用】\n\n" +
+  "① " + employees[0].name + "｜" + employees[0].role + "｜" + employees[0].bonus + "\n" +
+  "② " + employees[1].name + "｜" + employees[1].role + "｜" + employees[1].bonus + "\n" +
+  "③ " + employees[2].name + "｜" + employees[2].role + "｜" + employees[2].bonus +
+  "\n\n1〜3で選んでください"
+);
+
+const employee = employees[Math.max(0, Math.min(2, Number(choice) - 1))];
+
+state.employee = employee;
+
+if(Number(choice) === 1){
+  state.stats.reputation = clamp(state.stats.reputation + 8);
+  state.stats.growth = clamp(state.stats.growth + 3);
+}else if(Number(choice) === 2){
+  state.stats.funds = clamp(state.stats.funds + 10);
+}else{
+  state.stats.growth = clamp(state.stats.growth + 8);
+  state.stats.morale = clamp(state.stats.morale + 5);
+}
+
+state.phase = "event";
+drawEvent();
+  
 }
 
 function drawEvent(){
